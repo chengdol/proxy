@@ -1,0 +1,42 @@
+version: "3.7"
+services:
+  ## envoy forward proxy
+  envoy-forward-proxy:
+    container_name: envoy-forward-proxy
+    build:
+      context: ./envoy
+      dockerfile: envoy.dockerfile
+    image: envoy-forward:v1.16.0
+    environment:
+    - ENVOY_CONFIG_YAML
+    ports:
+    - "10000:10000"
+    networks:
+    - envoy-forward-mesh
+
+  ## network tools box
+  network-test-box:
+    container_name: network-test-box
+    image: praqma/network-multitool
+    networks:
+    - envoy-forward-mesh
+
+  ## express simple http server with basic auth
+  express-http-authz:
+    container_name: express-http-authz
+    build:
+      context: ./expressHttpAuthServer
+      dockerfile: express_http_authz.dockerfile
+    image: express-http-authz:latest
+    networks:
+     envoy-forward-mesh:
+        aliases:
+         - http-authz
+    expose:
+      - "8081"
+    ports:
+      - "8081:8081"
+
+networks:
+  envoy-forward-mesh:
+    driver: bridge
