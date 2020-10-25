@@ -1,0 +1,28 @@
+---
+version: "3.7"
+services:
+  ## envoy tcp proxy
+  envoy-tcp-proxy:
+    container_name: envoy-tcp-proxy
+    build:
+      context: .
+      dockerfile: envoy.dockerfile
+    image: envoy-tcp:latest
+    ports:
+    - "10000:10000"
+    networks:
+    - envoy-tcp-mesh
+
+  ## tcp socket server
+  tcp-server:
+    container_name: tcp-server
+    build:
+      context: .
+      dockerfile: tcp-server.dockerfile
+    image: tcp-server:latest
+    networks:
+    - envoy-tcp-mesh
+
+networks:
+  envoy-tcp-mesh:
+    driver: bridge
