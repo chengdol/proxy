@@ -41,11 +41,35 @@ curl -v -x envoy-forward-proxy:10000 http://www.httpbin.org/ip -u chengdol:12345
 wget --connect-timeout 10 -e http_proxy="envoy-forward-proxy:10000" http://www.httpbin.org/ip --http-user=chengdol --http-password=123456 --auth-no-challenge
 ```
 
-For envoy_forward_https.yaml, only HTTPS traffic is allowed, HTTP is forbidden:
+For envoy_forward_https.yaml, only HTTPS traffic is allowed, HTTP is forbidden, I also add egress filter:
 ```
 curl -v -x envoy-forward-proxy:10000 https://www.httpbin.org/ip
 wget --connect-timeout 10 -e https_proxy="envoy-forward-proxy:10000" https://www.httpbin.org/ip
 ```
+
+For ingress IP filters, insert it at very beginning of filter_chains, for example:
+```yaml
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.rbac
+        config:
+          stat_prefix: ips_blocked
+          rules:
+            action: DENY
+            policies:
+              "ips_blocked":
+                permissions:
+                - any: true
+                principals:
+                - source_ip:
+                    address_prefix: 172.16.0.0
+                    prefix_len: 12
+                - source_ip:
+                    address_prefix: 192.168.0.0
+                    prefix_len: 16
+```
+
+
 
 For envoy_forward_https_auth.yaml, not support yet.
 
