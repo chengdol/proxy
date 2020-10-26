@@ -1,5 +1,5 @@
 # Envoy Forward Proxy
-envoy image veriosn `v1.16.0`, you may need to update it as envoy get more and more functionality support.
+I use `envoyproxy/envoy-dev:latest` image, you may switch to production release as needed, but sometimes production release image may not have the latest features.
 
 Comment and uncomment `.env` file to select target configuration one at a time:
 - envoy_forward_http.yaml: HTTP forwarding

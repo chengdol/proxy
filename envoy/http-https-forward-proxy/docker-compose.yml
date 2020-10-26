@@ -6,7 +6,7 @@ services:
     build:
       context: ./envoy
       dockerfile: envoy.dockerfile
-    image: envoy-forward:v1.16.0
+    image: envoy-forward:latest
     environment:
     - ENVOY_CONFIG_YAML
     ports:

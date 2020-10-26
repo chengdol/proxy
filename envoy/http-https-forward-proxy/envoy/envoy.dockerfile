@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy:v1.16.0
+FROM envoyproxy/envoy-dev:latest
 
 WORKDIR /etc/envoy
 

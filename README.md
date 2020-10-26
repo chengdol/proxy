@@ -1,6 +1,6 @@
 # Proxy
-This repo contains demo for popular proxies, all run via docker-compose:
+This repo contains demos for popular proxies:
 - envoy
 - squid
 
-See specific README under target folder.
+More detail please see README file in each category.
