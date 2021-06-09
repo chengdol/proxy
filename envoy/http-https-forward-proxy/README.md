@@ -1,5 +1,5 @@
-# Envoy Forward Proxy
-I use `envoyproxy/envoy-dev:latest` image, you may switch to production release as needed, but sometimes production release image may not have the latest features.
+# Envoy HTTP(S) Forward Proxy
+I use `envoyproxy/envoy-dev:latest` image, you can switch to production image as needed, but  production ready image may not have the latest features.
 
 Comment and uncomment `.env` file to select target configuration one at a time:
 - envoy_forward_http.yaml: HTTP forwarding
@@ -20,13 +20,20 @@ network-test-box(client) --------> envoy-forward-proxy ----------> target server
 
 ## Commands
 Launch docker compose cluster:
-```
-docker-compose up [-d]
+```bash
+# -d: detach
+docker-compose up -d
 ```
 
-Start process on `network-test-box` container, we issue test commands from here:
+To access Envoy admin portal, in your browser:
+```bash
+http://localhost:9904
 ```
-docker exec -it network-test-box bash
+
+## Test
+Start process on `network-test-box` container, we issue test commands from here:
+```bash
+docker exec -it network-test-box sh
 ```
 
 For envoy_forward_http.yaml, only HTTP traffic is allowed:
@@ -68,11 +75,7 @@ For ingress IP filters, insert it at very beginning of filter_chains, for exampl
                     address_prefix: 192.168.0.0
                     prefix_len: 16
 ```
-
-
-
 For envoy_forward_https_auth.yaml, not support yet.
-
 
 Remove docker-compose cluster:
 ```bash
