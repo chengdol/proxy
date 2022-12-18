@@ -1,13 +1,13 @@
-## envoy HTTP forward proxy
-## with basic auth enabled
+# Envoy HTTP dynamic forward proxy without CONNECT
 ---
 admin:
-  access_log_path: "/tmp/admin_access.log"
+  access_log_path: "/dev/stdout"
   address:
     socket_address:
       protocol: TCP
-      address: 127.0.0.1
-      port_value: 9904
+      address: 0.0.0.0
+      # control plane port
+      port_value: 9901
 static_resources:
   listeners:
   - name: listener_0
@@ -21,58 +21,43 @@ static_resources:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          codec_type: AUTO
           stat_prefix: ingress_http
-
+          access_log:
+          - name: envoy.access_loggers.stdout
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
           route_config:
             name: local_route
             virtual_hosts:
             - name: local_service
               domains:
-              - "*"
+              #- "*"
+              - "*.httpbin.org"
               routes:
-              ## HTTP route
+              # HTTP route
               - match:
                   prefix: "/"
                 route:
                   cluster: dynamic_forward_proxy_cluster
                 typed_per_filter_config:
-                  ## The key should match the filter name
+                  # The key should match the filter name
                   envoy.filters.http.dynamic_forward_proxy:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
           http_filters:
-          ## external authorization
-          - name: envoy.filters.http.ext_authz
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-              http_service:
-                server_uri:
-                  ## external service
-                  uri: http://http_authz:8081
-                  cluster: ext-authz
-                  timeout: 0.25s
-                #authorization_request:
-                #  allowed_headers: 
-                #    patterns:
-                #    - contains: authorization 
-                #      ignore_case: true
-              failure_mode_allow: false
-              clear_route_cache: true
-          ## dynamic forward proxy http filter
+          # The dynamic forward proxy http filter
+          # https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/dynamic_forward_proxy_filter
           - name: envoy.filters.http.dynamic_forward_proxy
             typed_config:
-              "@type": type.googleapis.com/envoy.config.filter.http.dynamic_forward_proxy.v2alpha.FilterConfig
+              "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
               dns_cache_config:
                 name: dynamic_forward_proxy_cache_config
                 dns_lookup_family: V4_ONLY
-          ## normal forward proxy http filter
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 1s
-
     lb_policy: CLUSTER_PROVIDED
     cluster_type:
       name: envoy.clusters.dynamic_forward_proxy
@@ -81,16 +66,3 @@ static_resources:
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: V4_ONLY
-  - name: ext-authz
-    connect_timeout: 0.25s
-    type: strict_dns
-    lb_policy: round_robin
-    load_assignment:
-      cluster_name: ext-authz
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: http_authz
-                port_value: 8081
