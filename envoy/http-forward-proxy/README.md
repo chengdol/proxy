@@ -55,8 +55,10 @@ envoyproxy/envoy:v1.24.1 \
 -c "/envoy_forward_http_w_connect.yaml" \
 -l "debug"
 
-# non-CONNECT request will not be allowed.
+# As in the config we have both routes match for http/https:
+# non-CONNECT HTTP request.
 curl -v -x localhost:10000 "http://www.httpbin.org/ip"
+curl -v -H "Host: www.httpbin.org" localhost:10000/ip
 # Must use -x to specify HTTP proxy to do CONNECT method.
 curl -v -x localhost:10000 "https://www.httpbin.org/ip"
 ```

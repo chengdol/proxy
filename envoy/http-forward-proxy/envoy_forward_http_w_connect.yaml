@@ -42,8 +42,15 @@ static_resources:
               # Allow all for testing tunnel for ftp
               - "*"
               # For CONNECT, must specify port
+              # - "*.httpbin.org"
               # - "*.httpbin.org:443"
               routes:
+              # HTTP
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: dynamic_forward_proxy_cluster
+              # CONNECT
               - match:
                   # The matcher will only match CONNECT requests. 
                   connect_matcher:
@@ -71,8 +78,6 @@ static_resources:
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 1s
-    http2_protocol_options:
-     allow_connect: true
     lb_policy: CLUSTER_PROVIDED
     cluster_type:
       name: envoy.clusters.dynamic_forward_proxy
