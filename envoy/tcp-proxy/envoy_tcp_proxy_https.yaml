@@ -1,4 +1,4 @@
-# Envoy TCP Proxy
+# Envoy TCP Proxy with HTTPS Server
 admin:
   address:
     socket_address:
