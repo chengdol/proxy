@@ -1,0 +1,30 @@
+version: "3.7"
+services:
+  vm1:
+    container_name: vm1
+    image: travelping/nettools:latest
+    command: tail -f /dev/null
+    networks:
+    - spla-network
+
+  envoy-http-proxy:
+    container_name: envoy-http-proxy
+    build:
+      context: .
+      dockerfile: ./envoy_http_proxy.dockerfile
+    image: envoy-http-proxy:latest
+    networks:
+    - spla-network
+
+  ext-authz-server:
+    container_name: ext-authz-server
+    build:
+      context: ./ext_authz_server
+      dockerfile: ./ext_authz_server.dockerfile
+    image: ext-authz-server:latest
+    networks:
+    - spla-network
+
+networks:
+ spla-network:
+   driver: bridge

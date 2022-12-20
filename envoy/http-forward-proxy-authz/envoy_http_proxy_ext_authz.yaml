@@ -1,0 +1,119 @@
+# # Envoy HTTP dynamic forward proxy with CONNECT and External Authorization
+admin:
+  address:
+    socket_address:
+      protocol: TCP
+      address: 0.0.0.0
+      port_value: 9901
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        protocol: TCP
+        address: 0.0.0.0
+        port_value: 10000
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          access_log:
+          - name: envoy.access_loggers.stdout
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+
+          # CONNECT upgrade
+          # https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/upgrades#connect-support
+          http2_protocol_options:
+            allow_connect: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
+
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains:
+              # Allow all for testing tunnel for ftp
+              - "*"
+              # For CONNECT, must specify port
+              # - "*.httpbin.org"
+              # - "*.httpbin.org:443"
+              routes:
+              # HTTP
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: dynamic_forward_proxy_cluster
+              # CONNECT
+              - match:
+                  # The matcher will only match CONNECT requests. 
+                  connect_matcher:
+                    {}
+                route:
+                  cluster: dynamic_forward_proxy_cluster
+                  upgrade_configs:
+                  - upgrade_type: CONNECT
+                    connect_config:
+                      {}
+                typed_per_filter_config:
+                  envoy.filters.http.dynamic_forward_proxy:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.PerRouteConfig
+          http_filters:
+          - name: envoy.filters.http.ext_authz
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+              grpc_service:
+                timeout: 2s
+                envoy_grpc:
+                  cluster_name: ext-authz
+                  authority: "just_a_test"
+                initial_metadata:
+                - key: "x-pc-alias"
+                  value: "apple"
+                - key: "x-pc-id"
+                  value: "888888-777777-6666666-555555"
+              failure_mode_allow: false
+              include_peer_certificate: false
+              transport_api_version: V3
+              bootstrap_metadata_labels_key: data_from_label
+          - name: envoy.filters.http.dynamic_forward_proxy
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
+              dns_cache_config:
+                name: dynamic_forward_proxy_cache_config
+                dns_lookup_family: V4_ONLY
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+  - name: ext-authz
+    connect_timeout: 2s
+    type: STRICT_DNS
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
+    load_assignment:
+      cluster_name: ext-authz
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                # This is the container name from docker compose yaml file.
+                address: ext-authz-server
+                port_value: 10004
+  - name: dynamic_forward_proxy_cluster
+    connect_timeout: 1s
+    lb_policy: CLUSTER_PROVIDED
+    cluster_type:
+      name: envoy.clusters.dynamic_forward_proxy
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
+        dns_cache_config:
+          name: dynamic_forward_proxy_cache_config
+          dns_lookup_family: V4_ONLY
